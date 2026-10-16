@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bem Me Quer — Calculadora de Orçamentos e Reserva</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonte Inter (Google Fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* Design Tokens / Paleta Oficial */
+    :root {
+      --color-sky: #A9D6E8;
+      --color-ivory: #F5EEDD;
+      --color-navy: #1F3A56;
+      --color-teal: #2E7A72;
+      --color-gold: #E2A93E;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #FFFFFF;
+      color: var(--color-navy);
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Acessibilidade - Navegação por Teclado e Foco Visível */
+    *:focus-visible {
+      outline: 3px solid var(--color-gold) !important;
+      outline-offset: 3px !important;
+      border-radius: 8px;
+    }
+
+    /* Estilização de Botões de Seleção */
+    .btn-chip {
+      background-color: #FFFFFF;
+      border: 1.5px solid #D6CEB8;
+      color: var(--color-navy);
+      transition: all 0.2s ease-in-out;
+      border-radius: 1rem;
+      padding: 0.65rem 1rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      width: 100%;
+      text-align: center;
+    }
+
+    .btn-chip:hover {
+      border-color: var(--color-teal);
+      background-color: #FAF6ED;
+    }
+
+    .btn-chip[aria-pressed="true"],
+    .btn-chip[aria-checked="true"],
+    .btn-chip.selected {
+      background-color: var(--color-teal) !important;
+      color: #FFFFFF !important;
+      border-color: var(--color-teal) !important;
+      box-shadow: 0 4px 10px rgba(46, 122, 114, 0.2);
+    }
+
+    /* Botão CTA Principal Dourado */
+    .btn-cta-gold {
+      background-color: var(--color-gold);
+      color: var(--color-navy);
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 4px 14px rgba(226, 169, 62, 0.35);
+    }
+
+    .btn-cta-gold:hover {
+      background-color: #ebd181;
+      background-color: #f0b848;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(226, 169, 62, 0.45);
+    }
+
+    .btn-cta-gold:active {
+      transform: translateY(0);
+    }
+
+    /* Células do Calendário de Outubro */
+    .calendar-day {
+      height: 2.75rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.625rem;
+      font-weight: 700;
+      font-size: 0.85rem;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .calendar-day.available {
+      background-color: #FFFFFF;
+      color: var(--color-navy);
+      border: 1px solid #D6CEB8;
+    }
+
+    .calendar-day.weekend-day {
+      border-color: #E2A93E;
+      background-color: #FFFDF8;
+    }
+
+    .calendar-day.available:hover {
+      background-color: var(--color-sky);
+      border-color: var(--color-teal);
+      transform: scale(1.04);
+      z-index: 2;
+    }
+
+    .calendar-day.selected {
+      background-color: var(--color-teal) !important;
+      color: #FFFFFF !important;
+      border: 2px solid var(--color-gold) !important;
+      box-shadow: 0 0 0 3px rgba(226, 169, 62, 0.35);
+    }
+
+    .calendar-day.occupied {
+      background-color: #E8E2D5;
+      color: #A39B8B;
+      text-decoration: line-through;
+      cursor: not-allowed;
+      border: 1px dashed #C5BCAB;
+    }
+
+    /* Animação suave para atualização de preço */
+    .price-update-pulse {
+      animation: pulsePrice 0.3s ease-out;
+    }
+
+    @keyframes pulsePrice {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- ==================== 1. CABEÇALHO SEMÂNTICO (HEADER FIGMA) ==================== -->
+  <header class="bg-white border-b border-stone-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      
+      <!-- Logo do Topo -->
+      <a href="#" class="text-2xl font-black text-[#1F3A56] tracking-tight hover:opacity-90 transition-opacity" aria-label="Bem Me Quer - Página Inicial">
+        Bem Me Quer
+      </a>
+
+      <!-- Menu de Navegação Central -->
+      <nav aria-label="Navegação do site" class="hidden md:flex items-center space-x-8">
+        <a href="#galeria" class="text-sm font-semibold text-[#1F3A56] hover:text-[#2E7A72] transition-colors">Galeria</a>
+        <a href="#saloes" class="text-sm font-semibold text-[#1F3A56] hover:text-[#2E7A72] transition-colors">Nossos Salões</a>
+        <a href="#faq" class="text-sm font-semibold text-[#1F3A56] hover:text-[#2E7A72] transition-colors">FAQ</a>
+        <a href="#orcamento" class="text-sm font-semibold text-[#1F3A56] hover:text-[#2E7A72] transition-colors">Orçamento</a>
+      </nav>
+
+      <!-- Botão CTA Topo -->
+      <div>
+        <a href="#orcamento" class="bg-[#E2A93E] hover:bg-[#f0b848] text-[#1F3A56] font-bold text-sm px-5 py-3 rounded-xl transition-all shadow-sm inline-flex items-center gap-2">
+          <span>Simule seu orçamento</span>
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== 2. HERO BANNER (AZUL-CÉU) ==================== -->
+  <section class="bg-[#A9D6E8] py-12 md:py-16 border-b border-[#8FC8DF] text-center w-full">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black text-[#1F3A56] tracking-tight">
+        Bem Me Quer
+      </h1>
+      <p class="text-lg md:text-xl font-bold text-[#1F3A56]/80 mt-2">
+        Calculadora de orçamentos
+      </p>
+    </div>
+  </section>
+
+  <!-- ==================== 3. CONTEÚDO PRINCIPAL (DADOS & RESUMO) ==================== -->
+  <main id="orcamento" class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14 w-full">
+    
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- ==================== COLUNA DA ESQUERDA: DETALHES DO EVENTO (lg:col-span-7) ==================== -->
+      <section class="lg:col-span-7 bg-[#F5EEDD] border-2 border-[#E2DA9D] rounded-3xl p-6 md:p-8 shadow-sm space-y-7">
+        
+        <header class="border-b border-[#1F3A56]/10 pb-4">
+          <h2 class="text-2xl md:text-3xl font-black text-[#1F3A56]">
+            Detalhes do evento
+          </h2>
+          <p class="text-sm font-medium text-[#1F3A56]/70 mt-1">
+            Conte-nos sobre o seu evento para que possamos encontrar a melhor solução.
+          </p>
+        </header>
+
+        <form id="calculatorForm" onsubmit="event.preventDefault();" class="space-y-7">
+          
+          <!-- Espaço -->
+          <fieldset class="space-y-2">
+            <legend class="text-base font-bold text-[#1F3A56] mb-1">Espaço</legend>
+            <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="Escolha do espaço">
+              <button type="button" role="radio" aria-checked="false" class="btn-chip space-btn" data-space="villa" data-price="6000" data-name="Villa">Villa</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip space-btn" data-space="garden" data-price="5500" data-name="Garden">Garden</button>
+              <button type="button" role="radio" aria-checked="true" class="btn-chip space-btn selected" data-space="combo" data-price="9500" data-name="Villa + Garden">Villa + Garden</button>
+            </div>
+            <p class="text-[11px] font-medium text-[#1F3A56]/60 mt-1">Selecione um dos espaços ou os dois juntos.</p>
+          </fieldset>
+
+          <!-- Tipo de Evento -->
+          <fieldset class="space-y-2">
+            <legend class="text-base font-bold text-[#1F3A56] mb-1">Tipo de evento</legend>
+            <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="Tipo de evento">
+              <button type="button" role="radio" aria-checked="true" class="btn-chip event-type-btn selected" data-type="Casamento">Casamento</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip event-type-btn" data-type="Formatura">Formatura</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip event-type-btn" data-type="Aniversário">Aniversário</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip event-type-btn" data-type="Corporativo">Corporativo</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip event-type-btn" data-type="Religioso">Religioso</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip event-type-btn" data-type="Outro">Outro</button>
+            </div>
+          </fieldset>
+
+          <!-- Duração do Evento -->
+          <fieldset class="space-y-2">
+            <legend class="text-base font-bold text-[#1F3A56] mb-1">Duração do evento</legend>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" role="radiogroup" aria-label="Duração em horas">
+              <button type="button" role="radio" aria-checked="true" class="btn-chip duration-btn selected" data-hours="4" data-extra="0">4 Horas (Base)</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip duration-btn" data-hours="5" data-extra="500">5 Horas (+R$500)</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip duration-btn" data-hours="6" data-extra="1000">6 Horas (+R$1000)</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip duration-btn" data-hours="7" data-extra="1500">7 Horas (+R$1500)</button>
+            </div>
+          </fieldset>
+
+          <!-- Número Estimado de Convidados -->
+          <fieldset class="space-y-2">
+            <legend class="text-base font-bold text-[#1F3A56] mb-1">Número estimado de convidados</legend>
+            <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="Número de convidados">
+              <button type="button" role="radio" aria-checked="false" class="btn-chip guest-btn" data-guests="80">Até 80</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip guest-btn" data-guests="100">81-100</button>
+              <button type="button" role="radio" aria-checked="true" class="btn-chip guest-btn selected" data-guests="120">101-120</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip guest-btn" data-guests="150">121-150</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip guest-btn" data-guests="180">151-180</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip guest-btn" data-guests="200">181-200</button>
+            </div>
+          </fieldset>
+
+          <!-- Serviços Adicionais -->
+          <fieldset class="space-y-2">
+            <legend class="text-base font-bold text-[#1F3A56] mb-1">Serviços adicionais</legend>
+            <div class="grid grid-cols-2 gap-3" aria-label="Serviços opcionais">
+              <button type="button" aria-pressed="false" class="btn-chip service-btn" data-service="acai" data-per-guest="12" data-name="Carrinho de açaí">Carrinho de açaí</button>
+              <button type="button" aria-pressed="true" class="btn-chip service-btn selected" data-service="buffet" data-per-guest="45" data-name="Buffet">Buffet</button>
+              <button type="button" aria-pressed="false" class="btn-chip service-btn" data-service="cabine" data-fixed="1200" data-name="Cabine fotográfica">Cabine fotográfica</button>
+              <button type="button" aria-pressed="true" class="btn-chip service-btn selected" data-service="dj" data-fixed="1800" data-name="DJ">DJ</button>
+            </div>
+            <p class="text-[11px] font-medium text-[#1F3A56]/60 mt-1">Açaí e Buffet são cobrados pelo número estimado de convidados · DJ e Cabine têm valor fixo.</p>
+          </fieldset>
+
+          <!-- Forma de Pagamento (À vista x Parcelado) -->
+          <fieldset class="space-y-2 bg-white/60 p-4 rounded-2xl border border-[#D6CEB8]">
+            <legend class="text-base font-bold text-[#1F3A56] mb-1">Forma de pagamento</legend>
+            <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Condições de pagamento">
+              <button type="button" role="radio" aria-checked="true" class="btn-chip payment-btn selected" data-method="pix" data-discount="0.10">À vista (PIX -10% OFF)</button>
+              <button type="button" role="radio" aria-checked="false" class="btn-chip payment-btn" data-method="card" data-discount="0">Parcelado (até 10x)</button>
+            </div>
+          </fieldset>
+
+          <!-- Observações -->
+          <div class="space-y-2">
+            <label for="formNotes" class="block text-base font-bold text-[#1F3A56]">Observações</label>
+            <textarea id="formNotes" rows="3" placeholder="Algum pedido especial, tema ou necessidade específica?" class="w-full bg-white border border-[#D6CEB8] rounded-2xl p-3.5 text-sm text-[#1F3A56] focus:border-[#2E7A72] outline-none transition-colors resize-none"></textarea>
+          </div>
+
+          <!-- Botão Calcular Orçamento -->
+          <div>
+            <button type="button" id="btnRecalculate" class="w-full bg-[#2E7A72] hover:bg-[#25645d] text-white font-extrabold text-lg py-4 rounded-2xl shadow-md transition-all active:scale-[0.99]">
+              CALCULAR ORÇAMENTO
+            </button>
+          </div>
+
+        </form>
+
+      </section>
+
+      <!-- ==================== COLUNA DA DIREITA: RESUMO DO ORÇAMENTO E DISPONIBILIDADE (lg:col-span-5) ==================== -->
+      <aside class="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+        
+        <header>
+          <h2 class="text-2xl md:text-3xl font-black text-[#1F3A56]">
+            Resumo do orçamento
+          </h2>
+        </header>
+
+        <!-- CARD DE VALOR PRINCIPAL (FIGMA STYLE COM DESTAQUE UX SOLUÇÃO) -->
+        <section class="bg-[#F5EEDD] border-2 border-[#E2DA9D] rounded-3xl p-6 md:p-7 shadow-sm text-center relative overflow-hidden">
+          
+          <span class="block text-sm font-bold text-[#1F3A56] uppercase tracking-wider mb-2">
+            Valor total do orçamento
+          </span>
+
+          <div class="my-3">
+            <span id="displayTotalPrice" class="text-4xl md:text-5xl font-black text-[#1F3A56] tracking-tight block">
+              R$ 20.000
+            </span>
+            <span id="displayValidity" class="text-xs font-semibold text-[#1F3A56]/70 mt-1 block">
+              Válido para a data selecionada
+            </span>
+          </div>
+
+          <!-- SOLUÇÃO DE UX DESTAQUE DE NAVEGAÇÃO: BOTÃO DOURADO DIRETO JUNTO AO PREÇO -->
+          <div class="mt-6">
+            <button type="button" id="btnReserveTopCTA" class="btn-cta-gold w-full py-4 px-5 rounded-2xl font-black text-lg flex items-center justify-center gap-2 cursor-pointer shadow-md">
+              <span>RESERVAR ESTA DATA</span>
+              <span class="text-xl">&rarr;</span>
+            </button>
+          </div>
+
+        </section>
+
+        <!-- CALENDÁRIO DE DISPONIBILIDADE -->
+        <section class="bg-white border-2 border-[#2E7A72] rounded-3xl p-5 shadow-sm">
+          <header class="flex items-center justify-between mb-3 pb-2 border-b border-[#2E7A72]/20">
+            <div>
+              <h3 class="text-lg font-black text-[#1F3A56] flex items-center gap-2">
+                <svg class="w-5 h-5 text-[#2E7A72]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                Disponibilidade — Outubro
+              </h3>
+            </div>
+            <span id="badgeSelectedDate" class="text-xs font-bold text-white bg-[#2E7A72] px-2.5 py-1 rounded-full">
+              17 de Outubro
+            </span>
+          </header>
+
+          <p class="text-[11px] font-medium text-[#1F3A56]/70 mb-3">
+            Clique no dia para simular a reserva. Dias de Fim de semana (Sex/Sáb/Dom) contam com taxa de +20%.
+          </p>
+
+          <!-- Nomes dos dias -->
+          <div class="grid grid-cols-7 gap-1 text-center text-xs font-black text-[#1F3A56]/70 mb-1">
+            <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span class="text-[#E2A93E]">S</span><span class="text-[#E2A93E]">S</span>
+          </div>
+
+          <!-- Grade do Calendário -->
+          <div id="calendarGrid" class="grid grid-cols-7 gap-1.5" role="grid" aria-label="Dias de outubro">
+            <!-- Renderizado via Javascript -->
+          </div>
+        </section>
+
+        <!-- DETALHAMENTO DOS CUSTOS -->
+        <section class="bg-[#F5EEDD] border border-[#E2DA9D] rounded-3xl p-6 space-y-3 text-sm text-[#1F3A56]">
+          <h3 class="font-black text-base border-b border-[#1F3A56]/15 pb-2">
+            Detalhamento dos custos:
+          </h3>
+
+          <div class="space-y-2 font-semibold">
+            <div class="flex justify-between">
+              <span>• Locação do espaço:</span>
+              <span id="costSpace">R$ 9.500,00</span>
+            </div>
+
+            <div id="rowWeekend" class="flex justify-between text-[#E2A93E]">
+              <span>• Suplemento Fim de semana (+20%):</span>
+              <span id="costWeekend">+ R$ 1.900,00</span>
+            </div>
+
+            <div id="rowDuration" class="flex justify-between text-[#1F3A56]/80 hidden">
+              <span>• Duração adicional:</span>
+              <span id="costDuration">+ R$ 0,00</span>
+            </div>
+
+            <div class="flex justify-between">
+              <span>• Serviços adicionais:</span>
+              <span id="costServices">R$ 7.200,00</span>
+            </div>
+
+            <div id="rowDiscount" class="flex justify-between text-[#2E7A72] font-extrabold border-t border-[#1F3A56]/10 pt-2">
+              <span>• Desconto À vista (PIX 10%):</span>
+              <span id="costDiscount">- R$ 1.860,00</span>
+            </div>
+          </div>
+
+          <!-- PRÓXIMOS PASSOS -->
+          <div class="border-t border-[#1F3A56]/15 pt-4 mt-4">
+            <h4 class="font-bold text-xs uppercase tracking-wider text-[#1F3A56]/70 mb-2">Próximos passos:</h4>
+            <ol class="text-xs font-bold space-y-1.5 text-[#1F3A56]">
+              <li>1. Agendar uma visita ao salão</li>
+              <li>2. Reservar uma data preferida</li>
+              <li>3. Confirmar serviços e contrato final</li>
+            </ol>
+          </div>
+
+          <!-- BOTÃO INFERIOR DE SOLICITAÇÃO FORMAL -->
+          <div class="pt-2">
+            <button type="button" id="btnFormalProposal" class="w-full bg-[#2E7A72] hover:bg-[#25645d] text-white font-extrabold text-sm py-3.5 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
+              <span>SOLICITAR PROPOSTA FORMAL</span>
+            </button>
+            <p class="text-[10px] text-center text-[#1F3A56]/60 mt-2 font-medium">
+              Preços baseados nas seleções e sujeitos a disponibilidade de agenda.
+            </p>
+          </div>
+
+        </section>
+
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- ==================== MODAL DE CONFIRMAÇÃO DE RESERVA ==================== -->
+  <div id="reservationModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-[#1F3A56]/70 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="modalHeading">
+    
+    <div id="modalBox" class="bg-[#F5EEDD] border-2 border-[#2E7A72] rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative transform transition-all scale-95 opacity-0">
+      
+      <!-- Botão Fechar -->
+      <button type="button" id="btnCloseModal" class="absolute top-5 right-5 text-[#1F3A56]/60 hover:text-[#1F3A56] p-2 rounded-full hover:bg-stone-200/50 transition-colors" aria-label="Fechar janela">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+
+      <header class="mb-4">
+        <span class="text-[11px] font-black uppercase text-white bg-[#2E7A72] px-2.5 py-1 rounded-md inline-block mb-2">
+          Pré-Reserva de Data
+        </span>
+        <h3 id="modalHeading" class="text-2xl font-black text-[#1F3A56]">
+          Solicitar Proposta Formal
+        </h3>
+        <p class="text-xs font-medium text-[#1F3A56]/70 mt-1">
+          Confira o resumo do seu orçamento e informe seu contato para atendimento no WhatsApp.
+        </p>
+      </header>
+
+      <!-- Resumo do Modal -->
+      <div class="bg-white p-4 rounded-2xl border border-[#D6CEB8] space-y-1.5 text-xs text-[#1F3A56] mb-5">
+        <div class="flex justify-between border-b border-stone-100 pb-1.5">
+          <span class="font-bold">Data Selecionada:</span>
+          <span id="modalDate" class="font-black text-[#2E7A72]">17 de Outubro</span>
+        </div>
+        <div class="flex justify-between border-b border-stone-100 pb-1.5">
+          <span class="font-bold">Espaço & Evento:</span>
+          <span id="modalSpace" class="font-semibold">Villa + Garden (Casamento)</span>
+        </div>
+        <div class="flex justify-between border-b border-stone-100 pb-1.5">
+          <span class="font-bold">Convidados:</span>
+          <span id="modalGuests" class="font-semibold">101-120 convidados</span>
+        </div>
+        <div class="flex justify-between pt-1 text-sm font-black text-[#1F3A56]">
+          <span>Valor Estimado:</span>
+          <span id="modalTotal" class="text-[#2E7A72] text-base">R$ 20.000</span>
+        </div>
+      </div>
+
+      <!-- Formulário de Contato -->
+      <form id="modalContactForm" class="space-y-3.5">
+        <div>
+          <label for="inputName" class="block text-xs font-bold text-[#1F3A56] mb-1">Seu Nome Completo *</label>
+          <input type="text" id="inputName" required placeholder="Digite seu nome" class="w-full bg-white border border-[#D6CEB8] rounded-xl p-3 text-sm text-[#1F3A56] focus:border-[#2E7A72] outline-none">
+        </div>
+
+        <div>
+          <label for="inputPhone" class="block text-xs font-bold text-[#1F3A56] mb-1">WhatsApp com DDD *</label>
+          <input type="tel" id="inputPhone" required placeholder="(11) 99999-9999" class="w-full bg-white border border-[#D6CEB8] rounded-xl p-3 text-sm text-[#1F3A56] focus:border-[#2E7A72] outline-none">
+        </div>
+
+        <button type="submit" class="btn-cta-gold w-full py-4 rounded-xl font-black text-base flex items-center justify-center gap-2 mt-2">
+          <span>Enviar Proposta para o WhatsApp</span>
+          <span>&rarr;</span>
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ==================== FOOTER SEMÂNTICO ==================== -->
+  <footer class="bg-[#1F3A56] text-white py-8 border-t border-stone-800 mt-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <p class="text-base font-black text-[#A9D6E8]">Bem Me Quer Espaço de Eventos</p>
+        <p class="text-xs text-white/70 mt-1">Transformando celebrações em memórias inesquecíveis.</p>
+      </div>
+      <div class="text-xs text-white/60 text-center sm:text-right">
+        <p>&copy; 2026 Bem Me Quer. Todos os direitos reservados.</p>
+        <p class="mt-0.5">Página 100% responsiva e acessível via teclado.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==================== JAVASCRIPT DE REGRA DE NEGÓCIO E INTERATIVIDADE ==================== -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      
+      // Estado Global da Aplicação
+      const state = {
+        space: 'combo',
+        spaceName: 'Villa + Garden',
+        spacePrice: 9500,
+        eventType: 'Casamento',
+        guests: 120,
+        durationHours: 4,
+        extraHoursPrice: 0,
+        selectedServices: new Map([
+          ['buffet', { name: 'Buffet', price: 45, isPerGuest: true }],
+          ['dj', { name: 'DJ', price: 1800, isPerGuest: false }]
+        ]),
+        paymentMethod: 'pix',
+        paymentDiscount: 0.10,
+        selectedDate: 17,
+        selectedDayOfWeek: 6, // Sábado
+        selectedDayName: 'Sábado',
+        isWeekend: true, // Sex, Sáb, Dom (+20%)
+        
+        // Totais
+        weekendSurcharge: 0,
+        servicesTotal: 0,
+        subtotal: 0,
+        finalTotal: 20000
+      };
+
+      const occupiedDays = [3, 10, 24, 31];
+      const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+      // Elementos do DOM
+      const spaceBtns = document.querySelectorAll('.space-btn');
+      const eventTypeBtns = document.querySelectorAll('.event-type-btn');
+      const guestBtns = document.querySelectorAll('.guest-btn');
+      const durationBtns = document.querySelectorAll('.duration-btn');
+      const serviceBtns = document.querySelectorAll('.service-btn');
+      const paymentBtns = document.querySelectorAll('.payment-btn');
+
+      const calendarGrid = document.getElementById('calendarGrid');
+      const badgeSelectedDate = document.getElementById('badgeSelectedDate');
+      const displayTotalPrice = document.getElementById('displayTotalPrice');
+
+      const costSpace = document.getElementById('costSpace');
+      const rowWeekend = document.getElementById('rowWeekend');
+      const costWeekend = document.getElementById('costWeekend');
+      const rowDuration = document.getElementById('rowDuration');
+      const costDuration = document.getElementById('costDuration');
+      const costServices = document.getElementById('costServices');
+      const rowDiscount = document.getElementById('rowDiscount');
+      const costDiscount = document.getElementById('costDiscount');
+
+      const btnReserveTopCTA = document.getElementById('btnReserveTopCTA');
+      const btnFormalProposal = document.getElementById('btnFormalProposal');
+      const btnRecalculate = document.getElementById('btnRecalculate');
+
+      const modal = document.getElementById('reservationModal');
+      const modalBox = document.getElementById('modalBox');
+      const btnCloseModal = document.getElementById('btnCloseModal');
+      const modalContactForm = document.getElementById('modalContactForm');
+
+      function formatBRL(value) {
+        return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      }
+
+      // 1. Renderizar Calendário de Outubro de 2026
+      function renderCalendar() {
+        calendarGrid.innerHTML = '';
+        const firstDayOffset = 4; // Quinta-feira
+        const daysInMonth = 31;
+
+        for (let i = 0; i < firstDayOffset; i++) {
+          const empty = document.createElement('div');
+          empty.setAttribute('aria-hidden', 'true');
+          calendarGrid.appendChild(empty);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayOfWeek = (firstDayOffset + day - 1) % 7;
+          const isWeekend = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
+          const isOccupied = occupiedDays.includes(day);
+          const isSelected = state.selectedDate === day;
+
+          const dayBtn = document.createElement('button');
+          dayBtn.type = 'button';
+          dayBtn.className = `calendar-day ${isOccupied ? 'occupied' : 'available'} ${isWeekend ? 'weekend-day' : ''} ${isSelected ? 'selected' : ''}`;
+          dayBtn.innerHTML = `<span class="text-xs font-black">${day}</span>`;
+          dayBtn.setAttribute('aria-label', `${day} de Outubro, ${dayNames[dayOfWeek]}`);
+
+          if (isOccupied) {
+            dayBtn.disabled = true;
+          } else {
+            dayBtn.addEventListener('click', () => {
+              state.selectedDate = day;
+              state.selectedDayOfWeek = dayOfWeek;
+              state.selectedDayName = dayNames[dayOfWeek];
+              state.isWeekend = isWeekend;
+              renderCalendar();
+              calculateTotal();
+            });
+          }
+
+          calendarGrid.appendChild(dayBtn);
+        }
+      }
+
+      // 2. Manipulação dos Seletores
+      spaceBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          spaceBtns.forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-checked', 'false'); });
+          btn.classList.add('selected');
+          btn.setAttribute('aria-checked', 'true');
+          state.space = btn.getAttribute('data-space');
+          state.spaceName = btn.getAttribute('data-name');
+          state.spacePrice = parseFloat(btn.getAttribute('data-price'));
+          calculateTotal();
+        });
+      });
+
+      eventTypeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          eventTypeBtns.forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-checked', 'false'); });
+          btn.classList.add('selected');
+          btn.setAttribute('aria-checked', 'true');
+          state.eventType = btn.getAttribute('data-type');
+        });
+      });
+
+      guestBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          guestBtns.forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-checked', 'false'); });
+          btn.classList.add('selected');
+          btn.setAttribute('aria-checked', 'true');
+          state.guests = parseInt(btn.getAttribute('data-guests'));
+          calculateTotal();
+        });
+      });
+
+      durationBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          durationBtns.forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-checked', 'false'); });
+          btn.classList.add('selected');
+          btn.setAttribute('aria-checked', 'true');
+          state.durationHours = parseInt(btn.getAttribute('data-hours'));
+          state.extraHoursPrice = parseFloat(btn.getAttribute('data-extra'));
+          calculateTotal();
+        });
+      });
+
+      serviceBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-service');
+          const isSelected = btn.classList.contains('selected');
+
+          if (isSelected) {
+            btn.classList.remove('selected');
+            btn.setAttribute('aria-pressed', 'false');
+            state.selectedServices.delete(key);
+          } else {
+            btn.classList.add('selected');
+            btn.setAttribute('aria-pressed', 'true');
+            const perGuest = btn.getAttribute('data-per-guest');
+            const fixed = btn.getAttribute('data-fixed');
+
+            state.selectedServices.set(key, {
+              name: btn.getAttribute('data-name'),
+              price: perGuest ? parseFloat(perGuest) : parseFloat(fixed),
+              isPerGuest: !!perGuest
+            });
+          }
+          calculateTotal();
+        });
+      });
+
+      paymentBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          paymentBtns.forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-checked', 'false'); });
+          btn.classList.add('selected');
+          btn.setAttribute('aria-checked', 'true');
+          state.paymentMethod = btn.getAttribute('data-method');
+          state.paymentDiscount = parseFloat(btn.getAttribute('data-discount'));
+          calculateTotal();
+        });
+      });
+
+      // 3. Função Central de Cálculo
+      function calculateTotal() {
+        // Espaço
+        let spaceCost = state.spacePrice;
+
+        // Fim de Semana (+20%)
+        state.weekendSurcharge = state.isWeekend ? (spaceCost * 0.20) : 0;
+
+        // Serviços
+        let servicesCost = 0;
+        state.selectedServices.forEach(s => {
+          servicesCost += s.isPerGuest ? (s.price * state.guests) : s.price;
+        });
+        state.servicesTotal = servicesCost;
+
+        // Subtotal
+        state.subtotal = spaceCost + state.weekendSurcharge + state.extraHoursPrice + servicesCost;
+
+        // Desconto PIX ou Parcelado
+        if (state.paymentMethod === 'pix') {
+          const discountVal = state.subtotal * 0.10;
+          state.finalTotal = state.subtotal - discountVal;
+
+          rowDiscount.classList.remove('hidden');
+          costDiscount.innerText = `- ${formatBRL(discountVal)}`;
+        } else {
+          state.finalTotal = state.subtotal;
+          rowDiscount.classList.add('hidden');
+        }
+
+        // Atualizações na Interface
+        displayTotalPrice.innerText = formatBRL(state.finalTotal);
+        badgeSelectedDate.innerText = `${state.selectedDate} de Outubro`;
+
+        costSpace.innerText = formatBRL(spaceCost);
+
+        if (state.isWeekend) {
+          rowWeekend.classList.remove('hidden');
+          costWeekend.innerText = `+ ${formatBRL(state.weekendSurcharge)}`;
+        } else {
+          rowWeekend.classList.add('hidden');
+        }
+
+        if (state.extraHoursPrice > 0) {
+          rowDuration.classList.remove('hidden');
+          costDuration.innerText = `+ ${formatBRL(state.extraHoursPrice)}`;
+        } else {
+          rowDuration.classList.add('hidden');
+        }
+
+        costServices.innerText = formatBRL(state.servicesTotal);
+
+        // Animação visual no valor
+        displayTotalPrice.classList.add('price-update-pulse');
+        setTimeout(() => displayTotalPrice.classList.remove('price-update-pulse'), 300);
+      }
+
+      btnRecalculate.addEventListener('click', calculateTotal);
+
+      // 4. Modal Modal Handlers
+      function openModal() {
+        document.getElementById('modalDate').innerText = `${state.selectedDate} de Outubro (${state.selectedDayName})`;
+        document.getElementById('modalSpace').innerText = `${state.spaceName} (${state.eventType})`;
+        document.getElementById('modalGuests').innerText = `Até ${state.guests} convidados · ${state.durationHours}h`;
+        document.getElementById('modalTotal').innerText = formatBRL(state.finalTotal);
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+          modalBox.classList.remove('scale-95', 'opacity-0');
+          modalBox.classList.add('scale-100', 'opacity-100');
+          document.getElementById('inputName').focus();
+        }, 10);
+      }
+
+      function closeModal() {
+        modalBox.classList.remove('scale-100', 'opacity-100');
+        modalBox.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 200);
+      }
+
+      btnReserveTopCTA.addEventListener('click', openModal);
+      btnFormalProposal.addEventListener('click', openModal);
+      btnCloseModal.addEventListener('click', closeModal);
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+      });
+
+      // 5. Envio do Formulário para o WhatsApp
+      modalContactForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('inputName').value.trim();
+        const phone = document.getElementById('inputPhone').value.trim();
+        const notes = document.getElementById('formNotes').value.trim() || 'Nenhuma';
+
+        const servicesArr = [];
+        state.selectedServices.forEach(s => servicesArr.push(s.name));
+        const servicesStr = servicesArr.length > 0 ? servicesArr.join(', ') : 'Nenhum adicional';
+
+        const paymentStr = state.paymentMethod === 'pix' 
+          ? 'À vista no PIX (com 10% de desconto)' 
+          : 'Parcelado no Cartão';
+
+        const message = 
+`🏰 *ORÇAMENTO & PRÉ-RESERVA — BEM ME QUER* 🏰
+
+Olá! Gostaria de solicitar a proposta formal do meu evento:
+
+📅 *Data:* ${state.selectedDate} de Outubro de 2026 (${state.selectedDayName}${state.isWeekend ? ' — Fim de semana' : ''})
+📍 *Espaço:* ${state.spaceName}
+🎉 *Evento:* ${state.eventType}
+👥 *Convidados:* Até ${state.guests} pessoas
+⏱️ *Duração:* ${state.durationHours} Horas
+✨ *Serviços:* ${servicesStr}
+💳 *Pagamento:* ${paymentStr}
+
+💰 *VALOR TOTAL ESTIMADO:* ${formatBRL(state.finalTotal)}
+
+👤 *Contato:*
+• *Nome:* ${name}
+• *WhatsApp:* ${phone}
+• *Observações:* ${notes}`;
+
+        const whatsappNumber = '5511999999999';
+        const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+
+        window.open(url, '_blank');
+        closeModal();
+      });
+
+      // Inicialização
+      renderCalendar();
+      calculateTotal();
+    });
+  </script>
+</body>
+</html>
